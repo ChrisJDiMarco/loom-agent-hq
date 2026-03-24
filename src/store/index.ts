@@ -1,158 +1,73 @@
 import { create } from "zustand";
-import type { Agent, FeedEvent, LoomStore, SessionStats } from "../types";
+import type { Agent, AgentType, DetectedProcess, FeedEvent, LoomStore, SessionStats } from "../types";
 
-// ─── Seed Data ────────────────────────────────────────────────────────────────
+// ─── Seed Data (used when Tauri backend hasn't reported yet) ──────────────────
 
 const SEED_AGENTS: Agent[] = [
   {
     id: "claude-code-1",
     name: "Claude Code",
     type: "claude-code",
-    status: "running",
-    task: "refactoring auth",
-    elapsed: "3:42",
-    progress: 72,
-    outputSnippet:
-      "Refactoring validateSession() to use\nJWT verification with RS256…\nMoving token refresh to middleware…",
-    lastActivity: new Date().toISOString(),
-    tokensUsed: 84200,
-    costUsd: 0.92,
-    needsReview: false,
-  },
-  {
-    id: "cursor-1",
-    name: "Cursor — Tab 2",
-    type: "cursor",
-    status: "running",
-    task: "writing tests",
-    elapsed: "1:18",
-    progress: 63,
-    outputSnippet:
-      "describe('UserService', () => {\n  it('creates user with valid…\n  it('rejects duplicate email…",
-    lastActivity: new Date().toISOString(),
-    tokensUsed: 31000,
-    costUsd: 0.44,
-    needsReview: false,
-  },
-  {
-    id: "devin-1",
-    name: "Devin",
-    type: "devin",
-    status: "waiting",
-    task: "awaiting review",
-    elapsed: "done",
-    progress: 100,
-    outputSnippet:
-      "PR #214 — payment flow complete.\nStripe webhook handler + idempotency\nkeys. Ready for your review.",
-    lastActivity: new Date(Date.now() - 120000).toISOString(),
-    tokensUsed: 11800,
-    costUsd: 0.28,
-    needsReview: true,
-  },
-  {
-    id: "copilot-1",
-    name: "Copilot",
-    type: "copilot",
     status: "idle",
-    task: "VS Code",
+    task: "Waiting for process scan…",
     elapsed: "—",
     progress: 0,
-    outputSnippet: "Waiting for input…",
-    lastActivity: new Date(Date.now() - 600000).toISOString(),
+    outputSnippet: "Loom is scanning for running AI agents on your Mac…",
+    lastActivity: new Date().toISOString(),
     tokensUsed: 0,
     costUsd: 0,
     needsReview: false,
-  },
-  {
-    id: "chatgpt-1",
-    name: "ChatGPT",
-    type: "chatgpt",
-    status: "idle",
-    task: "research tab",
-    elapsed: "—",
-    progress: 0,
-    outputSnippet: "Idle.",
-    lastActivity: new Date(Date.now() - 900000).toISOString(),
-    tokensUsed: 0,
-    costUsd: 0,
-    needsReview: false,
-  },
-  {
-    id: "windsurf-1",
-    name: "Windsurf",
-    type: "windsurf",
-    status: "error",
-    task: "token limit hit",
-    elapsed: "stopped",
-    progress: 100,
-    outputSnippet:
-      "ERR: Context window exhausted\nat API integration task line 847\nSuggest: split task or handoff",
-    lastActivity: new Date(Date.now() - 300000).toISOString(),
-    tokensUsed: 128000,
-    costUsd: 0.2,
-    needsReview: false,
-    errorMessage: "Context window exhausted (128k tokens)",
+    pid: null,
+    memoryMb: 0,
+    cpuUsage: 0,
   },
 ];
 
 const SEED_FEED: FeedEvent[] = [
   {
-    id: "f1",
-    agentId: "claude-code-1",
-    agentName: "Claude Code",
-    type: "completed",
-    headline: "Finished refactoring <code>authMiddleware.ts</code>",
-    detail: "4 files changed · +87 -143 lines · passes all tests",
-    timestamp: "12s ago",
+    id: "f-boot",
+    agentId: "system",
+    agentName: "Loom",
+    type: "user",
+    headline: "Loom started — scanning for AI agent processes",
+    detail: "Process scan runs every 10s · events will appear here in real time",
+    timestamp: "just now",
     read: false,
-  },
-  {
-    id: "f2",
-    agentId: "devin-1",
-    agentName: "Devin",
-    type: "waiting",
-    headline: "Needs approval to merge <code>feat/payment-flow</code>",
-    detail: "PR #214 ready — 3 new files, 1 migration",
-    timestamp: "2m ago",
-    read: false,
-  },
-  {
-    id: "f3",
-    agentId: "cursor-1",
-    agentName: "Cursor",
-    type: "running",
-    headline: "Generating unit tests for <code>UserService</code>",
-    detail: "14 of 22 test cases written · estimating 40s remaining",
-    timestamp: "now",
-    read: true,
-  },
-  {
-    id: "f4",
-    agentId: "windsurf-1",
-    agentName: "Windsurf",
-    type: "error",
-    headline: "Hit context limit on API integration task",
-    detail: "128k tokens exhausted — needs context reset or handoff",
-    timestamp: "5m ago",
-    read: false,
-  },
-  {
-    id: "f5",
-    agentId: "devin-1",
-    agentName: "You",
-    type: "handoff",
-    headline: "Promoted Devin's DB schema draft to Claude Code",
-    detail: "context handoff: schema.prisma + migration notes",
-    timestamp: "8m ago",
-    read: true,
   },
 ];
 
 const SEED_STATS: SessionStats = {
-  running: 3,
-  totalCostToday: 1.84,
-  totalTokensToday: 127000,
-  tasksDoneToday: 12,
+  running: 0,
+  totalCostToday: 0,
+  totalTokensToday: 0,
+  tasksDoneToday: 0,
+  cpuUsage: 0,
+  totalMemoryGb: 0,
+  usedMemoryGb: 0,
+};
+
+// ─── Process → Agent type mapping ─────────────────────────────────────────────
+// Matches the same list in src-tauri/src/lib.rs KNOWN_AGENTS
+
+const PROCESS_TO_TYPE: Record<string, AgentType> = {
+  "claude-code": "claude-code",
+  "cursor":      "cursor",
+  "windsurf":    "windsurf",
+  "devin":       "devin",
+  "chatgpt":     "chatgpt",
+  "copilot":     "copilot",
+  "node-agent":  "custom",
+  "vscode":      "copilot",
+};
+
+const TYPE_DISPLAY: Record<AgentType, { name: string; emoji: string }> = {
+  "claude-code": { name: "Claude Code",  emoji: "🤖" },
+  "cursor":      { name: "Cursor",       emoji: "✳️" },
+  "windsurf":    { name: "Windsurf",     emoji: "🌊" },
+  "devin":       { name: "Devin",        emoji: "🦾" },
+  "chatgpt":     { name: "ChatGPT",      emoji: "💬" },
+  "copilot":     { name: "Copilot",      emoji: "🐙" },
+  "custom":      { name: "Agent",        emoji: "⚙️" },
 };
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -166,17 +81,134 @@ export const useLoomStore = create<LoomStore>((set, get) => ({
   selectedAgentId: null,
   commandValue: "",
 
+  // ── Navigation ──────────────────────────────────────────────────────────────
   selectAgent: (id) => set({ selectedAgentId: id }),
   setCommandValue: (val) => set({ commandValue: val }),
-
   markAllRead: () =>
     set((s) => ({ feed: s.feed.map((e) => ({ ...e, read: true })) })),
 
+  // ── Process sync (called by useAgentScanner every 10s) ─────────────────────
+  syncProcesses: (detected: DetectedProcess[]) => {
+    set((s) => {
+      const now = new Date().toISOString()
+      const existingIds = new Set(s.agents.map((a) => a.id))
+      const updatedAgents = [...s.agents]
+      const newEvents: FeedEvent[] = []
+
+      // Build a set of pids currently active
+      const activePids = new Set(detected.map((p) => p.pid))
+
+      // Mark agents whose process is no longer running as idle
+      updatedAgents.forEach((agent) => {
+        if (agent.pid && !activePids.has(agent.pid)) {
+          if (agent.status === "running") {
+            agent.status = "idle"
+            agent.task = "Process stopped"
+            agent.pid = null
+            newEvents.push({
+              id: `f${_nextEventId++}`,
+              agentId: agent.id,
+              agentName: agent.name,
+              type: "user",
+              headline: `${agent.name} process stopped`,
+              detail: "Process no longer detected — may have finished or been closed",
+              timestamp: "just now",
+              read: false,
+            })
+          }
+        }
+      })
+
+      // Add or update agents from scan results
+      detected.forEach((proc) => {
+        const agentType = PROCESS_TO_TYPE[proc.agent_type] ?? "custom"
+        const agentId = `${agentType}-${proc.pid}`
+        const display = TYPE_DISPLAY[agentType]
+
+        if (!existingIds.has(agentId)) {
+          // New process detected — add to roster
+          const newAgent: Agent = {
+            id: agentId,
+            name: display.name,
+            type: agentType,
+            status: "running",
+            task: "Active — monitoring output",
+            elapsed: "0:00",
+            progress: 0,
+            outputSnippet: `Process detected: ${proc.name} (PID ${proc.pid})`,
+            lastActivity: now,
+            tokensUsed: 0,
+            costUsd: 0,
+            needsReview: false,
+            pid: proc.pid,
+            memoryMb: proc.memory_mb,
+            cpuUsage: proc.cpu_usage,
+          }
+          updatedAgents.push(newAgent)
+          existingIds.add(agentId)
+
+          newEvents.push({
+            id: `f${_nextEventId++}`,
+            agentId: agentId,
+            agentName: display.name,
+            type: "running",
+            headline: `${display.name} detected`,
+            detail: `PID ${proc.pid} · ${proc.memory_mb}MB · ${proc.cpu_usage.toFixed(1)}% CPU`,
+            timestamp: "just now",
+            read: false,
+          })
+        } else {
+          // Known process — update live metrics
+          const idx = updatedAgents.findIndex((a) => a.id === agentId)
+          if (idx !== -1) {
+            updatedAgents[idx] = {
+              ...updatedAgents[idx],
+              status: "running",
+              pid: proc.pid,
+              memoryMb: proc.memory_mb,
+              cpuUsage: proc.cpu_usage,
+              lastActivity: now,
+              outputSnippet: `PID ${proc.pid} · ${proc.memory_mb}MB · ${proc.cpu_usage.toFixed(1)}% CPU`,
+            }
+          }
+        }
+      })
+
+      const running = updatedAgents.filter((a) => a.status === "running").length
+
+      return {
+        agents: updatedAgents,
+        feed: [...newEvents, ...s.feed].slice(0, 50),
+        stats: {
+          ...s.stats,
+          running,
+        },
+      }
+    })
+  },
+
+  // ── System stats (CPU / memory from Rust) ──────────────────────────────────
+  setSystemStats: (stats: { cpu_usage: number; total_memory_gb: number; used_memory_gb: number }) => {
+    set((s) => ({
+      stats: {
+        ...s.stats,
+        cpuUsage: stats.cpu_usage,
+        totalMemoryGb: stats.total_memory_gb,
+        usedMemoryGb: stats.used_memory_gb,
+      },
+    }))
+  },
+
+  // ── Agent actions ───────────────────────────────────────────────────────────
   pauseAgent: (id) =>
     set((s) => ({
       agents: s.agents.map((a) =>
         a.id === id ? { ...a, status: "idle" as const, task: "paused" } : a
       ),
+      stats: {
+        ...s.stats,
+        running: Math.max(0, s.stats.running - 1),
+      },
     })),
 
   resumeAgent: (id) =>
@@ -184,40 +216,45 @@ export const useLoomStore = create<LoomStore>((set, get) => ({
       agents: s.agents.map((a) =>
         a.id === id ? { ...a, status: "running" as const } : a
       ),
+      stats: { ...s.stats, running: s.stats.running + 1 },
     })),
 
   approveAgent: (id) => {
-    const agent = get().agents.find((a) => a.id === id);
-    if (!agent) return;
+    const agent = get().agents.find((a) => a.id === id)
+    if (!agent) return
     set((s) => ({
       agents: s.agents.map((a) =>
         a.id === id
           ? { ...a, status: "idle" as const, needsReview: false, task: "approved — done" }
           : a
       ),
-      stats: { ...s.stats, tasksDoneToday: s.stats.tasksDoneToday + 1, running: Math.max(0, s.stats.running - 1) },
-    }));
+      stats: {
+        ...s.stats,
+        tasksDoneToday: s.stats.tasksDoneToday + 1,
+        running: Math.max(0, s.stats.running - 1),
+      },
+    }))
     get().addFeedEvent({
       agentId: id,
       agentName: "You",
       type: "completed",
-      headline: `Approved <strong>${agent.name}</strong>'s work`,
+      headline: `Approved ${agent.name}'s work`,
       detail: "Task marked complete",
       timestamp: "just now",
       read: false,
-    });
+    })
   },
 
   rejectAgent: (id) => {
-    const agent = get().agents.find((a) => a.id === id);
-    if (!agent) return;
+    const agent = get().agents.find((a) => a.id === id)
+    if (!agent) return
     set((s) => ({
       agents: s.agents.map((a) =>
         a.id === id
           ? { ...a, status: "idle" as const, needsReview: false, task: "rejected — needs rework" }
           : a
       ),
-    }));
+    }))
   },
 
   resetAgentContext: (id) =>
@@ -237,22 +274,22 @@ export const useLoomStore = create<LoomStore>((set, get) => ({
     })),
 
   handoffAgent: (fromId, toId) => {
-    const from = get().agents.find((a) => a.id === fromId);
-    const to = get().agents.find((a) => a.id === toId);
-    if (!from || !to) return;
+    const from = get().agents.find((a) => a.id === fromId)
+    const to   = get().agents.find((a) => a.id === toId)
+    if (!from || !to) return
     get().addFeedEvent({
       agentId: fromId,
       agentName: "You",
       type: "handoff",
-      headline: `Handed off <strong>${from.name}</strong> → <strong>${to.name}</strong>`,
+      headline: `Handed off ${from.name} → ${to.name}`,
       detail: "Context and task state transferred",
       timestamp: "just now",
       read: false,
-    });
+    })
   },
 
   addFeedEvent: (event) =>
     set((s) => ({
       feed: [{ ...event, id: `f${_nextEventId++}` }, ...s.feed].slice(0, 50),
     })),
-}));
+}))

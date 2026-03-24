@@ -8,11 +8,9 @@ repository = ""
 edition = "2021"
 rust-version = "1.77.2"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [lib]
 name = "loom_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
+crate-type = ["staticlib", "cdylib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -24,13 +22,10 @@ tauri-plugin-fs = "2"
 tauri-plugin-process = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-# For process detection
 sysinfo = "0.31"
-# For async tasks
 tokio = { version = "1", features = ["full"] }
 
 [profile.release]
-# Reduce binary size
 panic = "abort"
 codegen-units = 1
 lto = true

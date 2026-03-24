@@ -18,24 +18,31 @@ export interface Agent {
   name: string;
   type: AgentType;
   status: AgentStatus;
-  /** Short description of current task, e.g. "refactoring auth" */
   task: string;
-  /** Elapsed time string, e.g. "3:42" */
   elapsed: string;
   /** 0–100 */
   progress: number;
-  /** Last few lines of actual output */
   outputSnippet: string;
-  /** ISO timestamp of last activity */
   lastActivity: string;
-  /** Estimated tokens used this session */
   tokensUsed: number;
-  /** Estimated cost in USD this session */
   costUsd: number;
-  /** True if the agent is waiting for user review/approval */
   needsReview: boolean;
-  /** Error message if status === "error" */
   errorMessage?: string;
+  /** Live data from Rust process scan */
+  pid: number | null;
+  memoryMb: number;
+  cpuUsage: number;
+}
+
+// ─── Detected Process (from Rust sysinfo scan) ───────────────────────────────
+
+export interface DetectedProcess {
+  pid: number;
+  name: string;
+  /** Matches KNOWN_AGENTS keys in lib.rs: "claude-code", "cursor", etc. */
+  agent_type: string;
+  cpu_usage: number;
+  memory_mb: number;
 }
 
 // ─── Feed Event ──────────────────────────────────────────────────────────────
@@ -55,7 +62,7 @@ export interface FeedEvent {
   type: FeedEventType;
   headline: string;
   detail: string;
-  timestamp: string; // relative, e.g. "12s ago"
+  timestamp: string;
   read: boolean;
 }
 
@@ -66,6 +73,10 @@ export interface SessionStats {
   totalCostToday: number;
   totalTokensToday: number;
   tasksDoneToday: number;
+  /** From Rust get_system_stats */
+  cpuUsage: number;
+  totalMemoryGb: number;
+  usedMemoryGb: number;
 }
 
 // ─── Store ───────────────────────────────────────────────────────────────────
@@ -77,10 +88,20 @@ export interface LoomStore {
   selectedAgentId: string | null;
   commandValue: string;
 
-  // Actions
+  // Navigation
   selectAgent: (id: string | null) => void;
   setCommandValue: (val: string) => void;
   markAllRead: () => void;
+
+  // Backend sync — called by useAgentScanner
+  syncProcesses: (detected: DetectedProcess[]) => void;
+  setSystemStats: (stats: {
+    cpu_usage: number;
+    total_memory_gb: number;
+    used_memory_gb: number;
+  }) => void;
+
+  // Agent actions
   pauseAgent: (id: string) => void;
   resumeAgent: (id: string) => void;
   handoffAgent: (fromId: string, toId: string) => void;

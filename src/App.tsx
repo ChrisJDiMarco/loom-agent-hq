@@ -1,4 +1,4 @@
-// App.tsx — Root layout, mirrors the macOS window chrome from the original design
+// App.tsx — Root layout + Tauri backend wiring
 
 import { useEffect } from "react";
 import { TitleBar } from "./components/TitleBar";
@@ -6,52 +6,92 @@ import { Sidebar } from "./components/Sidebar";
 import { LiveFeed } from "./components/LiveFeed";
 import { AgentCards } from "./components/AgentCards";
 import { CommandBar } from "./components/CommandBar";
+import { useAgentScanner } from "./hooks/useAgentScanner";
+import { isTauriEnv } from "./hooks/useTauri";
 import { useLoomStore } from "./store";
 
-// ─── Simulated live updates (remove in production — replace with Tauri events) ─
+// ─── Browser-only demo simulation ────────────────────────────────────────────
+// Fires only when NOT running inside Tauri — keeps preview.html lively.
+// Remove this once the real Tauri watcher (Phase 2) covers all events.
 
-function useSimulatedUpdates() {
+function useDemoSimulation() {
   const addFeedEvent = useLoomStore((s) => s.addFeedEvent);
 
   useEffect(() => {
-    // Simulate a new event every ~15 seconds to demo the live feed
+    if (isTauriEnv()) return; // real backend handles this
+
+    const demoEvents = [
+      {
+        agentId: "demo",
+        agentName: "Claude Code",
+        type: "running" as const,
+        headline: "Working on <code>validateSession()</code>",
+        detail: "Writing RS256 key rotation logic… (demo mode)",
+        timestamp: "just now",
+        read: false,
+      },
+      {
+        agentId: "demo",
+        agentName: "Cursor",
+        type: "completed" as const,
+        headline: "Completed another test case",
+        detail: "UserService test suite progressing (demo mode)",
+        timestamp: "just now",
+        read: false,
+      },
+    ];
+
     const timer = setInterval(() => {
-      const events = [
-        {
-          agentId: "claude-code-1",
-          agentName: "Claude Code",
-          type: "running" as const,
-          headline: "Still working on <code>validateSession()</code>",
-          detail: "Writing RS256 key rotation logic…",
-          timestamp: "just now",
-          read: false,
-        },
-        {
-          agentId: "cursor-1",
-          agentName: "Cursor",
-          type: "completed" as const,
-          headline: "Completed test case #15 for <code>UserService</code>",
-          detail: "it('handles concurrent requests correctly') ✓",
-          timestamp: "just now",
-          read: false,
-        },
-      ];
-      const event = events[Math.floor(Math.random() * events.length)];
+      const event = demoEvents[Math.floor(Math.random() * demoEvents.length)];
       addFeedEvent(event);
-    }, 15000);
+    }, 12000);
 
     return () => clearInterval(timer);
   }, [addFeedEvent]);
 }
 
+// ─── Connection status banner ─────────────────────────────────────────────────
+
+function ConnectionBanner() {
+  const isInTauri = isTauriEnv();
+  if (isInTauri) return null;
+
+  return (
+    <div style={{
+      background: "rgba(255,149,0,0.12)",
+      borderBottom: "1px solid rgba(255,149,0,0.2)",
+      padding: "6px 20px",
+      fontSize: "12px",
+      color: "#A05F00",
+      display: "flex",
+      alignItems: "center",
+      gap: "6px",
+      flexShrink: 0,
+    }}>
+      <span>⚠️</span>
+      <span>
+        <strong>Browser preview mode</strong> — process scanning disabled.
+        Run <code style={{ background: "rgba(0,0,0,0.06)", padding: "1px 5px", borderRadius: 3 }}>
+          npm run tauri dev
+        </code> to connect the live backend.
+      </span>
+    </div>
+  );
+}
+
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  useSimulatedUpdates();
+  // Wire Rust backend — polls scan_agent_processes + listens for agent-status events
+  useAgentScanner();
+
+  // Demo simulation for browser preview
+  useDemoSimulation();
 
   return (
     <div className="app-root">
       <TitleBar />
+      <ConnectionBanner />
       <div className="main-layout">
         <Sidebar />
         <div className="content">

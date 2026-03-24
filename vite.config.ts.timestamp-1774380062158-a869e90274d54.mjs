@@ -1,0 +1,20 @@
+// vite.config.ts
+import { defineConfig } from "file:///sessions/admiring-keen-dijkstra/mnt/jarvis/loom-agent-hq/node_modules/vite/dist/node/index.js";
+import react from "file:///sessions/admiring-keen-dijkstra/mnt/jarvis/loom-agent-hq/node_modules/@vitejs/plugin-react/dist/index.js";
+var vite_config_default = defineConfig(async () => ({
+  plugins: [react()],
+  // Tauri expects a fixed port — don't open browser automatically
+  clearScreen: false,
+  server: {
+    port: 1420,
+    strictPort: true,
+    watch: {
+      // Don't watch the Rust files — Tauri handles that
+      ignored: ["**/src-tauri/**"]
+    }
+  }
+}));
+export {
+  vite_config_default as default
+};
+//# sourceMappingURL=data:application/json;base64,ewogICJ2ZXJzaW9uIjogMywKICAic291cmNlcyI6IFsidml0ZS5jb25maWcudHMiXSwKICAic291cmNlc0NvbnRlbnQiOiBbImNvbnN0IF9fdml0ZV9pbmplY3RlZF9vcmlnaW5hbF9kaXJuYW1lID0gXCIvc2Vzc2lvbnMvYWRtaXJpbmcta2Vlbi1kaWprc3RyYS9tbnQvamFydmlzL2xvb20tYWdlbnQtaHFcIjtjb25zdCBfX3ZpdGVfaW5qZWN0ZWRfb3JpZ2luYWxfZmlsZW5hbWUgPSBcIi9zZXNzaW9ucy9hZG1pcmluZy1rZWVuLWRpamtzdHJhL21udC9qYXJ2aXMvbG9vbS1hZ2VudC1ocS92aXRlLmNvbmZpZy50c1wiO2NvbnN0IF9fdml0ZV9pbmplY3RlZF9vcmlnaW5hbF9pbXBvcnRfbWV0YV91cmwgPSBcImZpbGU6Ly8vc2Vzc2lvbnMvYWRtaXJpbmcta2Vlbi1kaWprc3RyYS9tbnQvamFydmlzL2xvb20tYWdlbnQtaHEvdml0ZS5jb25maWcudHNcIjtpbXBvcnQgeyBkZWZpbmVDb25maWcgfSBmcm9tIFwidml0ZVwiO1xuaW1wb3J0IHJlYWN0IGZyb20gXCJAdml0ZWpzL3BsdWdpbi1yZWFjdFwiO1xuXG4vLyBodHRwczovL3ZpdGVqcy5kZXYvY29uZmlnL1xuZXhwb3J0IGRlZmF1bHQgZGVmaW5lQ29uZmlnKGFzeW5jICgpID0+ICh7XG4gIHBsdWdpbnM6IFtyZWFjdCgpXSxcbiAgLy8gVGF1cmkgZXhwZWN0cyBhIGZpeGVkIHBvcnQgXHUyMDE0IGRvbid0IG9wZW4gYnJvd3NlciBhdXRvbWF0aWNhbGx5XG4gIGNsZWFyU2NyZWVuOiBmYWxzZSxcbiAgc2VydmVyOiB7XG4gICAgcG9ydDogMTQyMCxcbiAgICBzdHJpY3RQb3J0OiB0cnVlLFxuICAgIHdhdGNoOiB7XG4gICAgICAvLyBEb24ndCB3YXRjaCB0aGUgUnVzdCBmaWxlcyBcdTIwMTQgVGF1cmkgaGFuZGxlcyB0aGF0XG4gICAgICBpZ25vcmVkOiBbXCIqKi9zcmMtdGF1cmkvKipcIl0sXG4gICAgfSxcbiAgfSxcbn0pKTtcbiJdLAogICJtYXBwaW5ncyI6ICI7QUFBNlYsU0FBUyxvQkFBb0I7QUFDMVgsT0FBTyxXQUFXO0FBR2xCLElBQU8sc0JBQVEsYUFBYSxhQUFhO0FBQUEsRUFDdkMsU0FBUyxDQUFDLE1BQU0sQ0FBQztBQUFBO0FBQUEsRUFFakIsYUFBYTtBQUFBLEVBQ2IsUUFBUTtBQUFBLElBQ04sTUFBTTtBQUFBLElBQ04sWUFBWTtBQUFBLElBQ1osT0FBTztBQUFBO0FBQUEsTUFFTCxTQUFTLENBQUMsaUJBQWlCO0FBQUEsSUFDN0I7QUFBQSxFQUNGO0FBQ0YsRUFBRTsiLAogICJuYW1lcyI6IFtdCn0K
