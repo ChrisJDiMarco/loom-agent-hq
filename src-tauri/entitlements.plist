@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  entitlements.plist — macOS App Sandbox entitlements for Loom
+
+  For Mac App Store submission you MUST enable the App Sandbox.
+  Add only what you need — reviewers will reject over-privileged apps.
+
+  Current entitlements:
+  - app-sandbox: required for MAS
+  - network.client: needed to load web fonts + future API calls
+  - files.user-selected.read-only: lets user pick a project folder to watch
+-->
+<plist version="1.0">
+<dict>
+  <!-- Required for Mac App Store -->
+  <key>com.apple.security.app-sandbox</key>
+  <true/>
+
+  <!-- Outbound network access (fonts, future API calls) -->
+  <key>com.apple.security.network.client</key>
+  <true/>
+
+  <!-- Read files the user selects via file picker -->
+  <key>com.apple.security.files.user-selected.read-only</key>
+  <true/>
+
+  <!--
+    NOT included by default (add as product evolves):
+
+    com.apple.security.files.all                     — broad file access (likely rejected)
+    com.apple.security.cs.allow-unsigned-executable  — needed if spawning sub-processes
+    com.apple.security.network.server                — if hosting a local server
+
+    NOTE: Process monitoring (sysinfo) may require an exception or a helper tool
+    distributed outside the sandbox. This is the main MAS challenge for Loom.
+    See README.md → "Mac App Store considerations" section.
+  -->
+</dict>
+</plist>

@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loom — Agent HQ</title>
+<style>
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  --bg:#F2F2F7; --bg-card:#FFFFFF; --sidebar-bg:#E9E9EE; --titlebar-bg:#EBEBF0;
+  --toolbar-bg:rgba(242,242,247,0.95); --input-bg:rgba(0,0,0,0.05);
+  --hover-bg:rgba(0,0,0,0.04); --selected-bg:rgba(0,122,255,0.10);
+  --t1:#1D1D1F; --t2:#6E6E73; --t3:#AEAEB2; --t4:#C7C7CC;
+  --sep:rgba(0,0,0,0.08); --sep2:rgba(0,0,0,0.14);
+  --accent:#007AFF; --accent-bg:rgba(0,122,255,0.10); --accent-mid:rgba(0,122,255,0.18);
+  --green:#34C759; --green-bg:rgba(52,199,89,0.11);
+  --orange:#FF9500; --orange-bg:rgba(255,149,0,0.11);
+  --red:#FF3B30; --red-bg:rgba(255,59,48,0.11);
+  --purple:#AF52DE; --purple-bg:rgba(175,82,222,0.11);
+  --s1:0 1px 3px rgba(0,0,0,0.08),0 1px 2px rgba(0,0,0,0.05);
+  --s2:0 4px 16px rgba(0,0,0,0.10),0 1px 4px rgba(0,0,0,0.06);
+  --s3:0 20px 48px rgba(0,0,0,0.14),0 4px 10px rgba(0,0,0,0.06);
+  --r:10px; --rs:6px; --rl:14px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;background:#DCDCE2;display:flex;align-items:center;justify-content:center}
+body{color:var(--t1);-webkit-font-smoothing:antialiased}
+
+/* ── Window ── */
+.win{width:1200px;height:760px;background:var(--bg);border-radius:14px;overflow:hidden;
+  box-shadow:var(--s3),0 0 0 0.5px rgba(0,0,0,0.18);display:flex;flex-direction:column;
+  animation:appear .4s cubic-bezier(.16,1,.3,1)}
+@keyframes appear{from{transform:scale(.96) translateY(10px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+@media(max-width:1240px){.win{width:98vw;height:94vh}}
+
+/* ── Titlebar ── */
+.titlebar{height:52px;background:var(--titlebar-bg);border-bottom:1px solid var(--sep);
+  display:flex;align-items:center;padding:0 16px;flex-shrink:0;-webkit-app-region:drag;user-select:none}
+.tlights{display:flex;gap:8px;margin-right:12px}
+.tl{width:13px;height:13px;border-radius:50%;cursor:pointer;box-shadow:0 0 0 .5px rgba(0,0,0,0.12) inset}
+.tl-r{background:#FF5F57}.tl-y{background:#FEBC2E}.tl-g{background:#28C840}
+.tbar-mid{flex:1;display:flex;align-items:center;justify-content:center;gap:6px}
+.tbar-title{font-size:13px;font-weight:600;color:var(--t1)}
+.tbar-sub{font-size:12px;color:var(--t3)}
+.tbar-right{display:flex;align-items:center;gap:6px}
+.ico-btn{width:30px;height:28px;border-radius:var(--rs);background:transparent;border:none;cursor:pointer;
+  color:var(--t2);font-size:15px;display:flex;align-items:center;justify-content:center;
+  transition:background .15s;-webkit-app-region:no-drag;position:relative}
+.ico-btn:hover{background:var(--hover-bg)}
+.ico-btn[data-n]::after{content:attr(data-n);position:absolute;top:2px;right:2px;
+  background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 4px;
+  border-radius:8px;min-width:15px;text-align:center;line-height:14px}
+.search-box{display:flex;align-items:center;gap:6px;background:var(--input-bg);
+  border-radius:var(--rs);padding:5px 10px;border:1px solid transparent;
+  transition:all .2s;min-width:190px;-webkit-app-region:no-drag}
+.search-box:focus-within{background:#fff;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+.search-box input{background:none;border:none;outline:none;font-size:12.5px;color:var(--t1);font-family:inherit;width:100%}
+.search-box input::placeholder{color:var(--t4)}
+
+/* ── Layout ── */
+.layout{display:flex;flex:1;overflow:hidden}
+
+/* ── Sidebar ── */
+.sidebar{width:220px;flex-shrink:0;background:var(--sidebar-bg);border-right:1px solid var(--sep);
+  display:flex;flex-direction:column;overflow:hidden}
+.sb-sec{padding:18px 10px 6px}
+.sb-lbl{font-size:11px;font-weight:600;color:var(--t3);letter-spacing:.04em;text-transform:uppercase;padding:0 8px;margin-bottom:4px}
+.nav{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:var(--rs);
+  cursor:pointer;transition:background .12s;margin-bottom:1px}
+.nav:hover{background:var(--hover-bg)}
+.nav.on{background:var(--selected-bg)}
+.nav.on .nav-lbl{color:var(--accent);font-weight:600}
+.nav.on .nav-ico{color:var(--accent)}
+.nav-ico{font-size:15px;color:var(--t2);width:20px;text-align:center;flex-shrink:0}
+.nav-lbl{font-size:13px;font-weight:500;color:var(--t1);flex:1}
+.nav-badge{background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center}
+.nb-red{background:var(--red)}.nb-or{background:var(--orange)}
+.sb-sep{height:1px;background:var(--sep);margin:8px 10px}
+.sb-footer{margin-top:auto;padding:12px 10px 16px}
+.stats-g{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.stile{background:var(--bg-card);border-radius:var(--rs);padding:8px 10px;text-align:center;box-shadow:var(--s1)}
+.stile-n{font-size:17px;font-weight:700;color:var(--t1);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.stile-l{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.03em;margin-top:1px}
+
+/* ── Main ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.toolbar{height:46px;flex-shrink:0;background:var(--toolbar-bg);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--sep);display:flex;align-items:center;padding:0 20px;gap:10px}
+.tb-title{font-size:15px;font-weight:600;color:var(--t1);flex:1}
+.tb-title span{font-size:12px;color:var(--t3);font-weight:400;margin-left:6px}
+.seg{display:flex;background:rgba(0,0,0,0.06);border-radius:var(--rs);padding:2px;gap:2px}
+.seg-b{padding:4px 12px;border-radius:4px;border:none;background:transparent;font-size:12px;font-weight:500;
+  color:var(--t2);cursor:pointer;transition:all .15s;font-family:inherit}
+.seg-b.on{background:#fff;color:var(--t1);box-shadow:var(--s1)}
+.tb-btn{display:flex;align-items:center;gap:5px;background:var(--bg-card);border:1px solid var(--sep2);
+  border-radius:var(--rs);padding:5px 11px;font-size:12.5px;font-weight:500;color:var(--t1);
+  cursor:pointer;transition:all .15s;font-family:inherit;box-shadow:var(--s1);white-space:nowrap}
+.tb-btn:hover{background:var(--hover-bg)}
+.tb-btn.prim{background:var(--accent);border-color:var(--accent);color:#fff}
+.tb-btn.prim:hover{background:#0066DD}
+
+/* ── Content ── */
+.content{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.view{flex:1;overflow-y:auto;padding:20px 24px;display:none;flex-direction:column;gap:18px}
+.view.on{display:flex}
+.view::-webkit-scrollbar{width:8px}
+.view::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.12);border-radius:4px;border:2px solid transparent;background-clip:padding-box}
+
+/* ── Stats row ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.stat-card{background:var(--bg-card);border-radius:var(--r);padding:14px 16px;box-shadow:var(--s1);
+  border:1px solid var(--sep);display:flex;align-items:center;gap:12px}
+.sc-icon{width:36px;height:36px;border-radius:var(--rs);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.sc-big{font-size:22px;font-weight:700;color:var(--t1);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.sc-lbl{font-size:11.5px;color:var(--t2);margin-top:1px}
+
+/* ── Section header ── */
+.sec-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.sec-t{font-size:13.5px;font-weight:600;color:var(--t1)}
+.sec-a{font-size:12px;color:var(--accent);cursor:pointer;font-weight:500}
+.sec-a:hover{text-decoration:underline}
+
+/* ── Feed ── */
+.feed{display:flex;flex-direction:column;gap:3px}
+.fi{display:flex;align-items:flex-start;gap:11px;padding:10px 12px;background:var(--bg-card);
+  border-radius:var(--r);border:1px solid var(--sep);transition:all .15s;
+  animation:sIn .25s cubic-bezier(.16,1,.3,1) backwards}
+.fi:hover{border-color:rgba(0,0,0,0.15);box-shadow:var(--s1)}
+.fi.read{opacity:.5}
+@keyframes sIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.fi-dot{width:28px;height:28px;border-radius:var(--rs);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:1px}
+.dg{background:var(--green-bg);color:var(--green)}.do{background:var(--orange-bg);color:var(--orange)}
+.dr{background:var(--red-bg);color:var(--red)}.db{background:var(--accent-bg);color:var(--accent)}.dp{background:var(--purple-bg);color:var(--purple)}
+.fi-body{flex:1;min-width:0}
+.fi-hl{font-size:13px;color:var(--t1);line-height:1.4}
+.fi-hl code{font-family:"SF Mono","Fira Mono",monospace;font-size:11.5px;background:var(--input-bg);padding:1px 4px;border-radius:3px}
+.fi-dt{font-size:11.5px;color:var(--t2);margin-top:2px;line-height:1.4}
+.fi-ts{font-size:11px;color:var(--t3);white-space:nowrap;margin-top:2px;font-variant-numeric:tabular-nums}
+
+/* ── Agent cards ── */
+.cards-g{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.acard{background:var(--bg-card);border-radius:var(--r);border:1px solid var(--sep);box-shadow:var(--s1);
+  padding:14px 16px;transition:all .18s;position:relative;overflow:hidden;
+  animation:sIn .25s cubic-bezier(.16,1,.3,1) backwards}
+.acard:hover{border-color:rgba(0,0,0,0.15);box-shadow:var(--s2);transform:translateY(-1px)}
+.acard::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.ac-g::before{background:var(--green)}.ac-o::before{background:var(--orange)}.ac-r::before{background:var(--red)}
+.chd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.chd-l{display:flex;align-items:center;gap:9px}
+.av{width:30px;height:30px;border-radius:var(--rs);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.cname{font-size:13px;font-weight:600;color:var(--t1)}
+.ctask{font-size:11px;color:var(--t2);margin-top:1px}
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px}
+.pg{background:var(--green-bg);color:#1A8731}.po{background:var(--orange-bg);color:#A05F00}.pr2{background:var(--red-bg);color:#CC2020}
+.pdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.pdg{background:var(--green);animation:pd 2s infinite}.pdo{background:var(--orange)}.pdr{background:var(--red)}
+@keyframes pd{0%,100%{opacity:1}50%{opacity:.5}}
+.prog-r{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.prog-b{flex:1;height:4px;background:rgba(0,0,0,0.06);border-radius:2px;overflow:hidden}
+.prog-f{height:100%;border-radius:2px;transition:width 1.2s ease}
+.prog-p{font-size:10.5px;color:var(--t3);min-width:28px;text-align:right;font-variant-numeric:tabular-nums}
+.cout{font-family:"SF Mono","Fira Mono",monospace;font-size:11px;color:var(--t2);background:var(--bg);
+  padding:8px 10px;border-radius:var(--rs);line-height:1.6;max-height:54px;overflow:hidden;
+  -webkit-mask-image:linear-gradient(to bottom,black 50%,transparent 100%);margin-bottom:10px;border:1px solid var(--sep)}
+.cft{display:flex;align-items:center;justify-content:space-between}
+.celapsed{font-size:11px;color:var(--t3);font-variant-numeric:tabular-nums}
+.cacts{display:flex;gap:4px;flex-wrap:wrap}
+.abtn{background:rgba(0,0,0,0.05);border:none;color:var(--t2);font-size:11.5px;padding:4px 9px;
+  border-radius:5px;cursor:pointer;font-family:inherit;transition:all .15s;font-weight:500}
+.abtn:hover{background:rgba(0,0,0,0.09);color:var(--t1)}
+.abtn.apr{background:var(--green-bg);color:#1A8731}.abtn.apr:hover{background:rgba(52,199,89,.2)}
+.abtn.blu{background:var(--accent-bg);color:var(--accent)}.abtn.blu:hover{background:var(--accent-mid)}
+
+/* ── Agents view ── */
+.ag-layout{display:flex;flex:1;overflow:hidden}
+.ag-list{width:310px;flex-shrink:0;overflow-y:auto;border-right:1px solid var(--sep)}
+.ag-list::-webkit-scrollbar{width:0}
+.ag-row{display:flex;align-items:center;gap:11px;padding:11px 16px;border-bottom:1px solid var(--sep);cursor:pointer;transition:background .12s}
+.ag-row:hover{background:var(--hover-bg)}
+.ag-row.sel{background:var(--selected-bg)}
+.ag-av{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.ag-inf{flex:1;min-width:0}
+.ag-nm{font-size:13px;font-weight:600;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ag-mt{font-size:11.5px;color:var(--t2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ag-rt{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
+.sdot{width:9px;height:9px;border-radius:50%}
+.sdg{background:var(--green);animation:pd 2s infinite}.sdo{background:var(--orange)}.sdr{background:var(--red)}.sdgr{background:var(--t4)}
+.ag-detail{flex:1;overflow-y:auto}
+.ag-detail::-webkit-scrollbar{width:8px}
+.ag-detail::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.12);border-radius:4px;border:2px solid transparent;background-clip:padding-box}
+.detail-hero{padding:28px 28px 20px;border-bottom:1px solid var(--sep);display:flex;align-items:flex-start;gap:18px}
+.hero-av{width:64px;height:64px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0;box-shadow:var(--s2)}
+.hero-nm{font-size:22px;font-weight:700;color:var(--t1);letter-spacing:-.02em}
+.hero-sb{font-size:13px;color:var(--t2);margin-top:3px}
+.hero-pills{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.hero-btns{display:flex;gap:6px;margin-top:14px}
+.d-sec{padding:20px 28px;border-bottom:1px solid var(--sep)}
+.d-sec:last-child{border-bottom:none}
+.d-lbl{font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px}
+.met-g{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.met-b{background:var(--bg);border-radius:var(--rs);padding:10px 12px;border:1px solid var(--sep)}
+.met-n{font-size:18px;font-weight:700;color:var(--t1);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.met-l{font-size:11px;color:var(--t2);margin-top:2px}
+.log-a{background:var(--bg);border:1px solid var(--sep);border-radius:var(--rs);padding:12px 14px;
+  font-family:"SF Mono","Fira Mono",monospace;font-size:11.5px;color:var(--t2);line-height:1.7;max-height:160px;overflow-y:auto}
+.log-ln{display:flex;gap:10px}
+.log-ts{color:var(--t3);flex-shrink:0;min-width:50px}
+.cfg-r{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--sep)}
+.cfg-r:last-child{border-bottom:none}
+.cfg-l{font-size:13px;color:var(--t1)}
+.cfg-v{font-size:12px;color:var(--t2);background:var(--bg);padding:3px 8px;border-radius:5px;border:1px solid var(--sep2);font-family:"SF Mono","Fira Mono",monospace}
+
+/* ── History ── */
+.ht{background:var(--bg-card);border-radius:var(--r);border:1px solid var(--sep);overflow:hidden;box-shadow:var(--s1)}
+.ht-head{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 90px;background:var(--bg);border-bottom:1px solid var(--sep2);padding:0 16px}
+.ht-th{font-size:11px;font-weight:600;color:var(--t2);padding:9px 0;text-transform:uppercase;letter-spacing:.04em}
+.ht-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 90px;padding:0 16px;border-bottom:1px solid var(--sep);transition:background .12s;align-items:center}
+.ht-row:last-child{border-bottom:none}
+.ht-row:hover{background:var(--hover-bg)}
+.ht-td{font-size:13px;color:var(--t1);padding:11px 0}
+.ht-td.dim{color:var(--t2);font-size:12px}
+.ht-td.mono{font-family:"SF Mono","Fira Mono",monospace;font-size:12px}
+.tnc{display:flex;align-items:center;gap:8px}
+.tico{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.tnm{font-size:13px;font-weight:500}
+.tag{font-size:11px;color:var(--t2)}
+
+/* ── Settings ── */
+.cfg-layout{display:flex;gap:20px}
+.cfg-nav{width:180px;flex-shrink:0}
+.cn{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:var(--rs);cursor:pointer;margin-bottom:2px;transition:background .12s}
+.cn:hover{background:var(--hover-bg)}
+.cn.on{background:var(--selected-bg)}
+.cn.on .cn-lbl{color:var(--accent);font-weight:600}
+.cn-ico{font-size:14px;color:var(--t2);width:18px;text-align:center}
+.cn-lbl{font-size:13px;font-weight:500;color:var(--t1)}
+.cfg-pane{flex:1}
+.pane{display:none}
+.pane.on{display:block}
+.pg-group{background:var(--bg-card);border-radius:var(--r);border:1px solid var(--sep);overflow:hidden;box-shadow:var(--s1);margin-bottom:14px}
+.pg-title{font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;padding:10px 16px 0}
+.pr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--sep)}
+.pr:last-child{border-bottom:none}
+.pr-lbl{font-size:13px;color:var(--t1);font-weight:500}
+.pr-desc{font-size:11.5px;color:var(--t2);margin-top:2px}
+.tog{width:38px;height:22px;border-radius:11px;background:var(--t4);border:none;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.tog.on{background:var(--accent)}
+.tog::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);transition:transform .2s}
+.tog.on::after{transform:translateX(16px)}
+.psel{background:var(--bg);border:1px solid var(--sep2);border-radius:var(--rs);padding:4px 8px;font-size:12.5px;color:var(--t1);font-family:inherit;cursor:pointer;-webkit-appearance:none;padding-right:20px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23AEAEB2'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center}
+.api-r{display:flex;gap:6px;align-items:center}
+.api-i{background:var(--bg);border:1px solid var(--sep2);border-radius:var(--rs);padding:5px 10px;font-size:12.5px;color:var(--t1);font-family:"SF Mono","Fira Mono",monospace;flex:1;outline:none}
+.api-i:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-bg)}
+
+/* ── Command bar ── */
+.cmd-bar{padding:12px 20px 16px;border-top:1px solid var(--sep);background:var(--toolbar-bg);backdrop-filter:blur(12px);flex-shrink:0}
+.cmd-w{display:flex;align-items:center;gap:10px;background:var(--bg-card);border:1.5px solid var(--sep2);border-radius:var(--r);padding:10px 14px;transition:all .2s;box-shadow:var(--s1)}
+.cmd-w:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+.cmd-ico{color:var(--t3);font-size:15px;flex-shrink:0}
+.cmd-in{flex:1;background:none;border:none;outline:none;color:var(--t1);font-size:13.5px;font-family:inherit}
+.cmd-in::placeholder{color:var(--t4)}
+.cmd-kbd{font-size:11px;color:var(--t3);background:var(--bg);padding:3px 7px;border-radius:5px;border:1px solid var(--sep2);white-space:nowrap;cursor:pointer}
+.cmd-tags{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+.ctag{font-size:11.5px;color:var(--accent);background:var(--accent-bg);border-radius:20px;padding:3px 10px;cursor:pointer;transition:all .15s;font-weight:500}
+.ctag:hover{background:var(--accent-mid)}
+
+/* ── Empty state ── */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:10px;text-align:center;padding:40px;color:var(--t2)}
+.empty-ico{font-size:48px;opacity:.25;margin-bottom:4px}
+.empty-t{font-size:17px;font-weight:600;color:var(--t1)}
+.empty-s{font-size:13px;max-width:260px;line-height:1.5}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);
+  background:#1D1D1F;color:#fff;font-size:12.5px;font-weight:500;padding:9px 18px;
+  border-radius:20px;opacity:0;transition:all .28s cubic-bezier(.16,1,.3,1);pointer-events:none;z-index:999;
+  box-shadow:0 6px 20px rgba(0,0,0,.25);white-space:nowrap}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="win">
+
+  <!-- TITLEBAR -->
+  <div class="titlebar">
+    <div class="tlights">
+      <div class="tl tl-r"></div><div class="tl tl-y"></div><div class="tl tl-g"></div>
+    </div>
+    <div class="tbar-mid">
+      <span class="tbar-title">Loom</span>
+      <span class="tbar-sub">— Agent HQ</span>
+    </div>
+    <div class="tbar-right">
+      <div class="search-box">
+        <span style="color:var(--t3);font-size:13px">🔍</span>
+        <input type="text" placeholder="Search agents, tasks…">
+      </div>
+      <button class="ico-btn" data-n="3" title="Notifications" onclick="toast('3 unread notifications')">🔔</button>
+      <button class="ico-btn" title="Add Agent" onclick="toast('+ Add Agent — click Agents → Add Agent')">＋</button>
+    </div>
+  </div>
+
+  <div class="layout">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sb-sec">
+        <div class="sb-lbl">Workspace</div>
+        <div class="nav on" id="n-ov"  onclick="go('overview')"><span class="nav-ico">📊</span><span class="nav-lbl">Overview</span></div>
+        <div class="nav"    id="n-ag"  onclick="go('agents')"><span class="nav-ico">🤖</span><span class="nav-lbl">Agents</span><span class="nav-badge" id="ab">2</span></div>
+        <div class="nav"    id="n-hi"  onclick="go('history')"><span class="nav-ico">📋</span><span class="nav-lbl">History</span></div>
+      </div>
+      <div class="sb-sep"></div>
+      <div class="sb-sec">
+        <div class="sb-lbl">System</div>
+        <div class="nav" id="n-se" onclick="go('settings')"><span class="nav-ico">⚙️</span><span class="nav-lbl">Settings</span></div>
+      </div>
+      <div style="flex:1"></div>
+      <div class="sb-footer">
+        <div class="stats-g">
+          <div class="stile"><div class="stile-n" id="s-run">2</div><div class="stile-l">Running</div></div>
+          <div class="stile"><div class="stile-n" id="s-cost">$2.48</div><div class="stile-l">Today</div></div>
+          <div class="stile"><div class="stile-n" id="s-tok">143k</div><div class="stile-l">Tokens</div></div>
+          <div class="stile"><div class="stile-n" id="s-done">14</div><div class="stile-l">Done</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+      <div class="toolbar">
+        <div class="tb-title" id="tb-title">Overview <span>Tuesday, March 24</span></div>
+        <div id="tb-acts">
+          <div class="seg">
+            <button class="seg-b on" onclick="segClick(this,'all')">All</button>
+            <button class="seg-b"    onclick="segClick(this,'active')">Active</button>
+            <button class="seg-b"    onclick="segClick(this,'review')">Needs Review</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+
+        <!-- ─── OVERVIEW ─── -->
+        <div class="view on" id="v-overview">
+          <div class="stats-row">
+            <div class="stat-card"><div class="sc-icon" style="background:var(--green-bg)">⚡</div><div><div class="sc-big" id="ov-r">2</div><div class="sc-lbl">Agents running</div></div></div>
+            <div class="stat-card"><div class="sc-icon" style="background:var(--accent-bg)">✅</div><div><div class="sc-big" id="ov-d">14</div><div class="sc-lbl">Tasks done today</div></div></div>
+            <div class="stat-card"><div class="sc-icon" style="background:var(--orange-bg)">💰</div><div><div class="sc-big" id="ov-c">$2.48</div><div class="sc-lbl">Spend today</div></div></div>
+            <div class="stat-card"><div class="sc-icon" style="background:var(--purple-bg)">🧠</div><div><div class="sc-big" id="ov-t">143k</div><div class="sc-lbl">Tokens used</div></div></div>
+          </div>
+          <div>
+            <div class="sec-h"><div class="sec-t">Live Feed</div><div class="sec-a" id="mr-btn" onclick="markRead()" style="display:none">Mark all read</div></div>
+            <div class="feed" id="feed-el"></div>
+          </div>
+          <div>
+            <div class="sec-h"><div class="sec-t">Active Agents</div><div class="sec-a" onclick="go('agents')">View all →</div></div>
+            <div class="cards-g" id="cards-el"></div>
+          </div>
+        </div>
+
+        <!-- ─── AGENTS ─── -->
+        <div class="view" id="v-agents" style="padding:0;flex-direction:row">
+          <div class="ag-layout">
+            <div class="ag-list" id="ag-list-el"></div>
+            <div class="ag-detail" id="ag-detail-el">
+              <div class="empty"><div class="empty-ico">🤖</div><div class="empty-t">Select an agent</div><div class="empty-s">Click any agent on the left to see live output, logs, and controls.</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── HISTORY ─── -->
+        <div class="view" id="v-history">
+          <div style="display:flex;gap:8px;align-items:center">
+            <div class="seg"><button class="seg-b on">All Tasks</button><button class="seg-b">Completed</button><button class="seg-b">Errors</button></div>
+            <div style="flex:1"></div>
+            <button class="tb-btn" onclick="toast('Exporting CSV…')">⬇ Export CSV</button>
+          </div>
+          <div class="ht">
+            <div class="ht-head"><div class="ht-th">Task</div><div class="ht-th">Agent</div><div class="ht-th">Duration</div><div class="ht-th">Cost</div><div class="ht-th">Status</div></div>
+            <div id="hist-el"></div>
+          </div>
+        </div>
+
+        <!-- ─── SETTINGS ─── -->
+        <div class="view" id="v-settings">
+          <div class="cfg-layout">
+            <div class="cfg-nav">
+              <div class="cn on" onclick="cfgPane('general',this)"><span class="cn-ico">🏠</span><span class="cn-lbl">General</span></div>
+              <div class="cn" onclick="cfgPane('agents2',this)"><span class="cn-ico">🤖</span><span class="cn-lbl">Agents</span></div>
+              <div class="cn" onclick="cfgPane('keys',this)"><span class="cn-ico">🔑</span><span class="cn-lbl">API Keys</span></div>
+              <div class="cn" onclick="cfgPane('notifs',this)"><span class="cn-ico">🔔</span><span class="cn-lbl">Notifications</span></div>
+              <div class="cn" onclick="cfgPane('appear',this)"><span class="cn-ico">🎨</span><span class="cn-lbl">Appearance</span></div>
+            </div>
+            <div class="cfg-pane">
+              <div class="pane on" id="p-general">
+                <div class="pg-group">
+                  <div class="pg-title">Startup</div>
+                  <div class="pr"><div><div class="pr-lbl">Launch at Login</div><div class="pr-desc">Open Loom automatically when you log in</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
+                  <div class="pr"><div><div class="pr-lbl">Show in Menu Bar</div><div class="pr-desc">Keep Loom accessible from the Mac menu bar</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
+                  <div class="pr"><div><div class="pr-lbl">Auto-scan Processes</div><div class="pr-desc">Detect AI agent processes running on your Mac</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
+                </div>
+                <div class="pg-group">
+                  <div class="pg-title">Scan Interval</div>
+                  <div class="pr"><div><div class="pr-lbl">Process scan frequency</div></div><select class="psel"><option>Every 5s</option><option selected>Every 10s</option><option>Every 30s</option></select></div>
+                </div>
+                <div class="pg-group">
+                  <div class="pg-title">Data &amp; Privacy</div>
+                  <div class="pr"><div><div class="pr-lbl">Usage Analytics</div><div class="pr-desc">Help improve Loom with anonymous data</div></div><button class="tog" onclick="this.classList.toggle('on')"></button></div>
+                  <div class="pr"><div><div class="pr-lbl">Clear History on Quit</div></div><button class="tog" onclick="this.classList.toggle('on')"></button></div>
+                </div>
+              </div>
+              <div class="pane" id="p-agents2">
+                <div class="pg-group">
+                  <div class="pg-title">Default Model Routing</div>
+                  <div class="pr"><div><div class="pr-lbl">Primary model</div><div class="pr-desc">Used for most tasks</div></div><select class="psel"><option selected>Claude Sonnet 4.5</option><option>Claude Opus 4</option><option>GPT-4o</option></select></div>
+                  <div class="pr"><div><div class="pr-lbl">Bulk / background tasks</div></div><select class="psel"><option selected>Claude Haiku 4.5</option><option>GPT-3.5</option></select></div>
+                </div>
+                <div class="pg-group">
+                  <div class="pg-title">Monitored Processes</div>
+                  <div class="pr"><div class="pr-lbl">claude</div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
+                  <div class="pr"><div class="pr-lbl">cursor</div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
+                  <div class="pr"><div class="pr-lbl">windsurf</div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
+                  <div class="pr"><div class="pr-lbl">devin</div><button class="tog" onclick="this.classList.toggle('on')"></button></div>
+                  <div class="pr"><div class="pr-lbl">copilot (code)</div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
+                </div>
+              </div>
+              <div class="pane" id="p-keys">
+                <div class="pg-group">
+                  <div class="pg-title">API Keys</div>
+                  <div class="pr"><div><div class="pr-lbl">Anthropic</div><div class="pr-desc">Claude models + MCP</div></div><div class="api-r"><input class="api-i" type="password" value="sk-ant-••••••••••" style="width:200px"><button class="abtn">Edit</button></div></div>
+                  <div class="pr"><div><div class="pr-lbl">OpenAI</div></div><div class="api-r"><input class="api-i" type="password" placeholder="sk-…" style="width:200px"><button class="abtn blu">Add</button></div></div>
+                  <div class="pr"><div><div class="pr-lbl">GitHub</div><div class="pr-desc">Copilot integration</div></div><div class="api-r"><input class="api-i" type="password" value="ghp_••••••••••" style="width:200px"><button class="abtn">Edit</button></div></div>
+                </div>
+              </div>
+              <div class="pane" id="p-notifs">
+                <div class="pg-group">
+                  <div class="pg-title">macOS Notifications</div>
+                  <div class="pr"><div class="pr-lbl">Task completed</div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
+                  <div class="pr"><div class="pr-lbl">Agent needs review</div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
+                  <div class="pr"><div class="pr-lbl">Error / context limit</div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
+                  <div class="pr"><div><div class="pr-lbl">Daily cost threshold</div><div class="pr-desc">Alert when spend exceeds $10</div></div><button class="tog" onclick="this.classList.toggle('on')"></button></div>
+                </div>
+                <div class="pg-group">
+                  <div class="pg-title">Sound</div>
+                  <div class="pr"><div class="pr-lbl">Play sound on completion</div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
+                </div>
+              </div>
+              <div class="pane" id="p-appear">
+                <div class="pg-group">
+                  <div class="pg-title">Theme</div>
+                  <div class="pr"><div class="pr-lbl">Appearance</div><select class="psel" onchange="switchTheme(this.value)"><option value="light" selected>Light</option><option value="dark">Dark</option></select></div>
+                  <div class="pr"><div class="pr-lbl">Accent Color</div><select class="psel"><option selected>Blue</option><option>Purple</option><option>Green</option><option>Orange</option></select></div>
+                </div>
+                <div class="pg-group">
+                  <div class="pg-title">Feed Display</div>
+                  <div class="pr"><div><div class="pr-lbl">Compact mode</div><div class="pr-desc">Smaller rows in the live feed</div></div><button class="tog" onclick="this.classList.toggle('on')"></button></div>
+                  <div class="pr"><div class="pr-lbl">Show agent avatars</div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /content -->
+
+      <!-- CMD BAR -->
+      <div class="cmd-bar" id="cmd-bar">
+        <div class="cmd-w">
+          <span class="cmd-ico">⌘</span>
+          <input class="cmd-in" id="cmd-in" type="text"
+            placeholder="Give instructions, ask questions, or hand off context across all agents…"
+            onkeydown="onCK(event)" oninput="onCI(event)">
+          <span class="cmd-kbd" id="cmd-kbd">⌘K</span>
+        </div>
+        <div class="cmd-tags">
+          <span class="ctag" onclick="runCmd('pause all')">Pause all</span>
+          <span class="ctag" onclick="runCmd('status report')">Status report</span>
+          <span class="ctag" onclick="runCmd('cost breakdown')">Cost breakdown</span>
+          <span class="ctag" onclick="runCmd('approve all')">Approve all</span>
+          <span class="ctag" onclick="runCmd('reset errors')">Reset errors</span>
+          <span class="ctag" onclick="runCmd('handoff Windsurf → Claude')">Handoff Windsurf → Claude</span>
+        </div>
+      </div>
+
+    </div><!-- /main -->
+  </div><!-- /layout -->
+</div><!-- /win -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════ STATE ═══════════════════
+const S = {
+  selAgent: null, feedN: 100,
+  agents: [
+    {id:'cc',name:'Claude Code',  em:'🤖',cbg:'rgba(0,122,255,.10)',
+     status:'running',task:'Refactoring auth middleware',elapsed:'4:12',prog:78,cost:1.14,tok:91000,
+     model:'claude-sonnet-4-5',pid:18420,
+     out:'Refactoring validateSession() to use\nJWT verification with RS256…\nMoving token refresh to middleware…',
+     logs:[{ts:'04:09',m:'Starting auth refactor — 6 files identified'},{ts:'04:10',m:'validateSession() extracted to middleware/auth.ts'},{ts:'04:11',m:'RS256 key loading from env.JWT_PUBLIC_KEY ✓'},{ts:'04:12',m:'Token refresh logic moved — running tests…'}]},
+    {id:'cu',name:'Cursor',       em:'✳️',cbg:'rgba(52,199,89,.10)',
+     status:'running',task:'Writing unit tests — UserService',elapsed:'2:07',prog:65,cost:0.53,tok:38000,
+     model:'gpt-4o',pid:19330,
+     out:"describe('UserService', () => {\n  it('creates user with valid data'…\n  it('rejects duplicate email'…",
+     logs:[{ts:'02:05',m:"Scaffolding describe('UserService')"},{ts:'02:06',m:'Written 16 of 22 test cases'},{ts:'02:07',m:'Mocking DB layer with jest.fn()…'}]},
+    {id:'dv',name:'Devin',        em:'🦾',cbg:'rgba(255,149,0,.10)',
+     status:'waiting',task:'PR #214 ready for review',elapsed:'done',prog:100,cost:0.31,tok:14200,
+     model:'claude-opus-4',pid:null,
+     out:'PR #214 — payment flow complete.\nStripe webhook handler + idempotency keys.\nAll CI checks passing. Awaiting approval.',
+     logs:[{ts:'08:14',m:'PR #214 opened against main'},{ts:'08:15',m:'3 new files, 1 migration, 0 conflicts'},{ts:'08:15',m:'CI passing ✓ — awaiting your review'}]},
+    {id:'cp',name:'Copilot',      em:'🐙',cbg:'rgba(110,110,115,.08)',
+     status:'idle',task:'VS Code — inline completions only',elapsed:'—',prog:0,cost:0,tok:0,
+     model:'gpt-4o',pid:22100,
+     out:'Active in VS Code. Inline suggestions only.',
+     logs:[{ts:'10:00',m:'Copilot extension loaded in VS Code'}]},
+    {id:'ws',name:'Windsurf',     em:'🌊',cbg:'rgba(255,59,48,.10)',
+     status:'error',task:'Context window exhausted',elapsed:'stopped',prog:100,cost:0.22,tok:128000,
+     model:'claude-sonnet-4-5',pid:null,
+     out:'ERR: Context window exhausted\nat Stripe API integration, line 847\nSuggest: split task or handoff to Claude',
+     logs:[{ts:'03:44',m:'Starting Stripe API integration'},{ts:'03:58',m:'Context at 96k tokens — approaching limit'},{ts:'04:01',m:'ERR: Context window exhausted (128k max)'}]},
+  ],
+  feed:[
+    {id:'f1',ico:'✓',cls:'dg',ag:'Claude Code',read:false,ts:'12s ago',hl:'Finished refactoring <code>authMiddleware.ts</code>',dt:'4 files changed · +87 −143 · all tests passing'},
+    {id:'f2',ico:'⏸',cls:'do',ag:'Devin',      read:false,ts:'2m ago', hl:'Needs approval on <code>feat/payment-flow</code>',  dt:'PR #214 ready — 3 new files, 1 migration, CI ✓'},
+    {id:'f3',ico:'↻',cls:'db',ag:'Cursor',     read:true, ts:'now',    hl:'Generating unit tests for <code>UserService</code>',dt:'16 of 22 cases written · ~40s remaining'},
+    {id:'f4',ico:'✕',cls:'dr',ag:'Windsurf',   read:false,ts:'5m ago', hl:'Context limit hit on Stripe API integration',       dt:'128k tokens exhausted — needs reset or handoff'},
+    {id:'f5',ico:'⬆',cls:'dp',ag:'You',        read:true, ts:'9m ago', hl:"Promoted Devin's DB schema → Claude Code",          dt:'Handoff: schema.prisma + migration notes'},
+  ],
+  stats:{running:2,done:14,cost:2.48,tok:143000},
+};
+
+const HIST = [
+  {t:'Refactor user auth to JWT RS256',   ag:'Claude Code',dur:'8m 14s',cost:'$1.84',ok:true, em:'🤖',bg:'var(--accent-bg)'},
+  {t:'Unit tests: OrderService',          ag:'Cursor',     dur:'3m 02s',cost:'$0.47',ok:true, em:'✳️',bg:'var(--green-bg)'},
+  {t:'Generate API endpoint stubs',       ag:'Claude Code',dur:'1m 44s',cost:'$0.22',ok:true, em:'🤖',bg:'var(--accent-bg)'},
+  {t:'DB schema migration v3 → v4',       ag:'Devin',      dur:'12m 30s',cost:'$2.10',ok:true,em:'🦾',bg:'var(--orange-bg)'},
+  {t:'Fix N+1 queries in dashboard',      ag:'Claude Code',dur:'2m 11s',cost:'$0.38',ok:true, em:'🤖',bg:'var(--accent-bg)'},
+  {t:'Stripe webhook integration',        ag:'Windsurf',   dur:'18m 01s',cost:'$0.22',ok:false,em:'🌊',bg:'var(--red-bg)'},
+  {t:'Playwright e2e test suite',         ag:'Cursor',     dur:'5m 55s',cost:'$0.88',ok:true, em:'✳️',bg:'var(--green-bg)'},
+  {t:'Code review: PR #211',              ag:'Claude Code',dur:'0m 48s',cost:'$0.09',ok:true, em:'🤖',bg:'var(--accent-bg)'},
+];
+
+// ═══════════════════ RENDER ═══════════════════
+function renderAll(){renderStats();renderFeed();renderCards();renderAgList();renderHist();}
+
+function renderStats(){
+  const s=S.stats;
+  ['run','cost','tok','done'].forEach(k=>{ // sidebar
+    const el = document.getElementById('s-'+k);
+    if(el) el.textContent = k==='cost'?'$'+s.cost.toFixed(2):k==='tok'?Math.round(s.tok/1000)+'k':s[k==='run'?'running':k];
+  });
+  document.getElementById('ov-r').textContent=s.running;
+  document.getElementById('ov-d').textContent=s.done;
+  document.getElementById('ov-c').textContent='$'+s.cost.toFixed(2);
+  document.getElementById('ov-t').textContent=Math.round(s.tok/1000)+'k';
+  document.getElementById('ab').textContent=S.agents.filter(a=>a.status==='running'||a.status==='waiting').length;
+}
+
+function renderFeed(){
+  const unread=S.feed.filter(e=>!e.read).length;
+  document.getElementById('mr-btn').style.display=unread?'block':'none';
+  document.getElementById('feed-el').innerHTML=S.feed.map((e,i)=>`
+    <div class="fi${e.read?' read':''}" style="animation-delay:${i*30}ms">
+      <div class="fi-dot ${e.cls}">${e.ico}</div>
+      <div class="fi-body">
+        <div class="fi-hl"><strong>${e.ag}</strong> ${e.hl}</div>
+        <div class="fi-dt">${e.dt}</div>
+      </div>
+      <div class="fi-ts">${e.ts}</div>
+    </div>`).join('');
+}
+
+function renderCards(){
+  const feat=S.agents.filter(a=>a.status!=='idle');
+  const cm={running:'ac-g',waiting:'ac-o',error:'ac-r'};
+  const pc={running:'var(--green)',waiting:'var(--orange)',error:'var(--red)'};
+  const pill=a=>a.status==='running'?`<span class="pill pg"><span class="pdot pdg"></span>Running</span>`:
+              a.status==='waiting'?`<span class="pill po"><span class="pdot pdo"></span>Needs Review</span>`:
+              `<span class="pill pr2"><span class="pdot pdr"></span>Error</span>`;
+  const el=a=>a.status==='waiting'?'Waiting for review':a.status==='error'?'Stopped — needs reset':`Elapsed ${a.elapsed}`;
+  const bts=a=>{
+    if(a.status==='running') return `<button class="abtn" onclick="pauseA('${a.id}')">Pause</button><button class="abtn" onclick="openD('${a.id}')">Details</button><button class="abtn blu" onclick="hoff('${a.id}')">→ Handoff</button>`;
+    if(a.status==='waiting') return `<button class="abtn apr" onclick="apprA('${a.id}')">Approve</button><button class="abtn" onclick="rejA('${a.id}')">Reject</button><button class="abtn blu" onclick="hoff('${a.id}')">→ Handoff</button>`;
+    return `<button class="abtn" onclick="retryA('${a.id}')">Retry</button><button class="abtn" onclick="resetC('${a.id}')">Reset Context</button><button class="abtn blu" onclick="hoff('${a.id}')">→ Handoff</button>`;
+  };
+  document.getElementById('cards-el').innerHTML=feat.map((a,i)=>`
+    <div class="acard ${cm[a.status]||'ac-g'}" style="animation-delay:${i*50}ms">
+      <div class="chd">
+        <div class="chd-l">
+          <div class="av" style="background:${a.cbg}">${a.em}</div>
+          <div><div class="cname">${a.name}</div><div class="ctask">${a.task}</div></div>
+        </div>
+        ${pill(a)}
+      </div>
+      <div class="prog-r">
+        <div class="prog-b"><div class="prog-f" style="width:${a.prog}%;background:${pc[a.status]}"></div></div>
+        <div class="prog-p">${a.prog}%</div>
+      </div>
+      <div class="cout">${a.out.replace(/\n/g,'<br>')}</div>
+      <div class="cft">
+        <div class="celapsed">${el(a)}</div>
+        <div class="cacts">${bts(a)}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderAgList(){
+  const sd={running:'sdg',waiting:'sdo',error:'sdr',idle:'sdgr'};
+  document.getElementById('ag-list-el').innerHTML=S.agents.map(a=>`
+    <div class="ag-row${S.selAgent===a.id?' sel':''}" onclick="openD('${a.id}')">
+      <div class="ag-av" style="background:${a.cbg}">${a.em}</div>
+      <div class="ag-inf">
+        <div class="ag-nm">${a.name}</div>
+        <div class="ag-mt">${a.task}</div>
+      </div>
+      <div class="ag-rt">
+        <div class="sdot ${sd[a.status]||'sdgr'}"></div>
+        <div style="font-size:10.5px;color:var(--t3)">${a.status}</div>
+      </div>
+    </div>`).join('');
+}
+
+function openD(id){
+  S.selAgent=id; renderAgList();
+  const a=S.agents.find(x=>x.id===id); if(!a) return;
+  const pill=a.status==='running'?`<span class="pill pg"><span class="pdot pdg"></span>Running</span>`:
+             a.status==='waiting'?`<span class="pill po"><span class="pdot pdo"></span>Needs Review</span>`:
+             a.status==='error'?`<span class="pill pr2">Error</span>`:`<span style="font-size:12px;color:var(--t3)">Idle</span>`;
+  const hbts=a.status==='running'?`<button class="tb-btn" onclick="pauseA('${a.id}')">⏸ Pause</button><button class="tb-btn prim" onclick="hoff('${a.id}')">→ Handoff</button>`:
+             a.status==='waiting'?`<button class="tb-btn" style="color:var(--green);border-color:var(--green-bg)" onclick="apprA('${a.id}')">✓ Approve</button><button class="tb-btn" onclick="rejA('${a.id}')">✕ Reject</button>`:
+             a.status==='error'?`<button class="tb-btn" onclick="retryA('${a.id}')">↺ Retry</button><button class="tb-btn prim" onclick="resetC('${a.id}')">Reset Context</button>`:
+             `<button class="tb-btn prim" onclick="resumeA('${a.id}')">▶ Resume</button>`;
+  const logs=a.logs.map(l=>`<div class="log-ln"><span class="log-ts">${l.ts}</span><span>${l.m}</span></div>`).join('');
+  document.getElementById('ag-detail-el').innerHTML=`
+    <div class="detail-hero">
+      <div class="hero-av" style="background:${a.cbg}">${a.em}</div>
+      <div style="flex:1">
+        <div class="hero-nm">${a.name}</div>
+        <div class="hero-sb">${a.task}</div>
+        <div class="hero-pills">${pill}${a.pid?`<span class="pill" style="background:var(--input-bg);color:var(--t2)">PID ${a.pid}</span>`:''}<span class="pill" style="background:var(--input-bg);color:var(--t2)">${a.model}</span></div>
+        <div class="hero-btns">${hbts}</div>
+      </div>
+    </div>
+    <div class="d-sec">
+      <div class="d-lbl">Session Metrics</div>
+      <div class="met-g">
+        <div class="met-b"><div class="met-n">${a.prog}%</div><div class="met-l">Progress</div></div>
+        <div class="met-b"><div class="met-n">${Math.round(a.tok/1000)}k</div><div class="met-l">Tokens</div></div>
+        <div class="met-b"><div class="met-n">$${a.cost.toFixed(2)}</div><div class="met-l">Cost</div></div>
+      </div>
+    </div>
+    <div class="d-sec">
+      <div class="d-lbl">Live Output</div>
+      <div class="log-a">${a.out.split('\n').map(l=>`<div class="log-ln"><span>${l}</span></div>`).join('')}</div>
+    </div>
+    <div class="d-sec">
+      <div class="d-lbl">Recent Log</div>
+      <div class="log-a">${logs}</div>
+    </div>
+    <div class="d-sec">
+      <div class="d-lbl">Configuration</div>
+      <div class="cfg-r"><div class="cfg-l">Model</div><div class="cfg-v">${a.model}</div></div>
+      <div class="cfg-r"><div class="cfg-l">Status</div><div class="cfg-v">${a.status}</div></div>
+      ${a.pid?`<div class="cfg-r"><div class="cfg-l">Process ID</div><div class="cfg-v">${a.pid}</div></div>`:''}
+      <div class="cfg-r"><div class="cfg-l">Session tokens</div><div class="cfg-v">${a.tok.toLocaleString()}</div></div>
+    </div>`;
+}
+
+function renderHist(){
+  document.getElementById('hist-el').innerHTML=HIST.map(r=>`
+    <div class="ht-row">
+      <div class="ht-td"><div class="tnc"><div class="tico" style="background:${r.bg}">${r.em}</div><div><div class="tnm">${r.t}</div><div class="tag">${r.ag}</div></div></div></div>
+      <div class="ht-td dim">${r.ag}</div>
+      <div class="ht-td mono">${r.dur}</div>
+      <div class="ht-td mono">${r.cost}</div>
+      <div class="ht-td">${r.ok?`<span class="pill pg" style="font-size:10.5px">✓ Done</span>`:`<span class="pill pr2" style="font-size:10.5px">✕ Error</span>`}</div>
+    </div>`).join('');
+}
+
+// ═══════════════════ NAVIGATION ═══════════════════
+const TB = {
+  overview:{title:'Overview',sub:'Tuesday, March 24',cmd:true,acts:`<div class="seg"><button class="seg-b on" onclick="segClick(this)">All</button><button class="seg-b" onclick="segClick(this)">Active</button><button class="seg-b" onclick="segClick(this)">Needs Review</button></div>`},
+  agents:  {title:'Agents',sub:'',cmd:false,acts:`<button class="tb-btn prim" onclick="toast('Add Agent — coming in v2!')">+ Add Agent</button>`},
+  history: {title:'History',sub:'',cmd:false,acts:`<button class="tb-btn" onclick="toast('Exporting…')">⬇ Export</button>`},
+  settings:{title:'Settings',sub:'',cmd:false,acts:''},
+};
+function go(v){
+  document.querySelectorAll('.nav').forEach(n=>n.classList.remove('on'));
+  document.getElementById('n-'+v.slice(0,2))?.classList.add('on');
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('on'));
+  document.getElementById('v-'+v)?.classList.add('on');
+  const c=TB[v]||{title:v,sub:'',cmd:false,acts:''};
+  document.getElementById('tb-title').innerHTML=c.title+(c.sub?` <span>${c.sub}</span>`:'');
+  document.getElementById('tb-acts').innerHTML=c.acts||'';
+  document.getElementById('cmd-bar').style.display=c.cmd!==false?'block':'none';
+  if(v==='agents') renderAgList();
+}
+function cfgPane(p,el){
+  document.querySelectorAll('.cn').forEach(x=>x.classList.remove('on'));el.classList.add('on');
+  document.querySelectorAll('.pane').forEach(x=>x.classList.remove('on'));
+  document.getElementById('p-'+p)?.classList.add('on');
+}
+function segClick(btn){
+  btn.closest('.seg').querySelectorAll('.seg-b').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+}
+
+// ═══════════════════ ACTIONS ═══════════════════
+function addFeed(ico,cls,ag,hl,dt){
+  S.feed.unshift({id:'f'+(S.feedN++),ico,cls,ag,hl,dt,read:false,ts:'just now'});
+  if(S.feed.length>60) S.feed.pop();
+  renderFeed();
+}
+function pauseA(id){
+  const a=S.agents.find(x=>x.id===id);if(!a)return;
+  a.status='idle';a.task='Paused';S.stats.running=Math.max(0,S.stats.running-1);
+  addFeed('⏸','do','You',`Paused <strong>${a.name}</strong>`,'Click Resume to restart');
+  toast(`${a.name} paused`);renderAll();if(S.selAgent===id)openD(id);
+}
+function resumeA(id){
+  const a=S.agents.find(x=>x.id===id);if(!a)return;
+  a.status='running';a.task='Resumed';S.stats.running++;
+  addFeed('▶','db','You',`Resumed <strong>${a.name}</strong>`,'Agent back online');
+  toast(`${a.name} resumed`);renderAll();if(S.selAgent===id)openD(id);
+}
+function apprA(id){
+  const a=S.agents.find(x=>x.id===id);if(!a)return;
+  a.status='idle';a.task='Approved ✓';S.stats.done++;
+  addFeed('✓','dg','You',`Approved <strong>${a.name}</strong>'s work`,'Task complete — PR merged');
+  toast('Approved!');renderAll();if(S.selAgent===id)openD(id);
+}
+function rejA(id){
+  const a=S.agents.find(x=>x.id===id);if(!a)return;
+  a.status='idle';a.task='Rejected — needs rework';
+  addFeed('✕','dr','You',`Rejected <strong>${a.name}</strong>'s work`,'Sent back for revision');
+  toast('Rejected — sent back');renderAll();
+}
+function retryA(id){
+  const a=S.agents.find(x=>x.id===id);if(!a)return;
+  a.status='running';a.task='Retrying…';a.prog=5;S.stats.running++;
+  addFeed('↻','db','You',`Retrying <strong>${a.name}</strong>`,'Context cleared — fresh start');
+  toast(`${a.name} retrying`);renderAll();if(S.selAgent===id)openD(id);
+}
+function resetC(id){
+  const a=S.agents.find(x=>x.id===id);if(!a)return;
+  a.status='idle';a.task='Context reset';a.prog=0;a.tok=0;
+  addFeed('↺','db','You',`Reset context for <strong>${a.name}</strong>`,'128k tokens cleared — ready');
+  toast('Context reset');renderAll();if(S.selAgent===id)openD(id);
+}
+function hoff(id){
+  const f=S.agents.find(x=>x.id===id);
+  const t=S.agents.find(x=>x.id!==id&&(x.status==='running'||x.status==='idle'));
+  if(!f)return;
+  addFeed('⬆','dp','You',`Handed off <strong>${f.name}</strong> → <strong>${t?.name||'Claude Code'}</strong>`,'Context and task state transferred');
+  toast(`Handoff → ${t?.name||'Claude Code'}`);
+}
+function markRead(){S.feed.forEach(e=>e.read=true);renderFeed();}
+
+// ═══════════════════ CMD BAR ═══════════════════
+function onCI(e){document.getElementById('cmd-kbd').textContent=e.target.value?'↵ send':'⌘K';}
+function onCK(e){if(e.key==='Enter'){runCmd(e.target.value);e.target.value='';document.getElementById('cmd-kbd').textContent='⌘K';}if(e.key==='Escape'){e.target.value='';}}
+function runCmd(cmd){
+  const l=cmd.toLowerCase().trim();if(!l)return;
+  if(l==='pause all'){S.agents.filter(a=>a.status==='running').forEach(a=>{a.status='idle';a.task='Paused';S.stats.running=0;});addFeed('⏸','do','You','Paused all running agents','Use Resume to restart');toast('All agents paused');renderAll();return;}
+  if(l==='approve all'){S.agents.filter(a=>a.status==='waiting').forEach(a=>{a.status='idle';a.task='Approved';S.stats.done++;});addFeed('✓','dg','You','Approved all waiting agents','All reviews cleared');toast('All approved');renderAll();return;}
+  if(l==='reset errors'){S.agents.filter(a=>a.status==='error').forEach(a=>{a.status='idle';a.task='Reset';a.prog=0;});addFeed('↺','db','You','Reset all errored agents','Contexts cleared');toast('All reset');renderAll();return;}
+  if(l==='status report'){addFeed('◉','db','Loom',`${S.stats.running} running · ${S.agents.filter(a=>a.status==='waiting').length} waiting · ${S.agents.filter(a=>a.status==='error').length} errors`,`$${S.stats.cost.toFixed(2)} spent · ${Math.round(S.stats.tok/1000)}k tokens · ${S.stats.done} tasks done`);renderFeed();return;}
+  if(l==='cost breakdown'){addFeed('💰','do','Loom','Cost breakdown',S.agents.filter(a=>a.cost>0).map(a=>`${a.name}: $${a.cost.toFixed(2)}`).join(' · '));renderFeed();return;}
+  addFeed('◉','db','You',cmd,'Command received — AI routing active in full build');
+}
+
+// ═══════════════════ THEME ═══════════════════
+function switchTheme(v){
+  const dark={bg:'#1a1a1e','bg-card':'#232328','sidebar-bg':'#1e1e23','titlebar-bg':'#1c1c21','toolbar-bg':'rgba(26,26,30,0.95)','input-bg':'rgba(255,255,255,0.06)','hover-bg':'rgba(255,255,255,0.04)','selected-bg':'rgba(0,122,255,0.15)',t1:'#e8e8ec',t2:'#8e8e96',t3:'#5a5a62',t4:'#3a3a42',sep:'rgba(255,255,255,0.07)',sep2:'rgba(255,255,255,0.11)'};
+  const light={bg:'#F2F2F7','bg-card':'#FFFFFF','sidebar-bg':'#E9E9EE','titlebar-bg':'#EBEBF0','toolbar-bg':'rgba(242,242,247,0.95)','input-bg':'rgba(0,0,0,0.05)','hover-bg':'rgba(0,0,0,0.04)','selected-bg':'rgba(0,122,255,0.10)',t1:'#1D1D1F',t2:'#6E6E73',t3:'#AEAEB2',t4:'#C7C7CC',sep:'rgba(0,0,0,0.08)',sep2:'rgba(0,0,0,0.14)'};
+  const t=v==='dark'?dark:light;
+  Object.entries(t).forEach(([k,val])=>document.documentElement.style.setProperty('--'+k,val));
+  document.body.style.background=v==='dark'?'#111114':'#DCDCE2';
+  toast(v==='dark'?'Dark mode':'Light mode');
+}
+
+// ═══════════════════ SIMULATION ═══════════════════
+const sim=[
+  ()=>{const a=S.agents.find(x=>x.id==='cc');if(a&&a.status==='running'){a.prog=Math.min(97,a.prog+2);renderCards();}},
+  ()=>addFeed('✓','dg','Claude Code','Completed <code>validateSession()</code> refactor','RS256 verification passing in all environments'),
+  ()=>addFeed('↻','db','Cursor',`Written test #${17+Math.floor(Math.random()*5)} of 22`,'UserService test suite progressing well'),
+  ()=>{S.stats.cost=parseFloat((S.stats.cost+0.04).toFixed(2));S.stats.tok+=1800;renderStats();},
+];
+let si=0; setInterval(()=>{sim[si%sim.length]();si++;},9000);
+
+// ═══════════════════ TOAST ═══════════════════
+let _tt;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('on');
+  clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('on'),2200);
+}
+
+// ═══════════════════ INIT ═══════════════════
+renderAll(); go('overview');
+</script>
+</body>
+</html>
